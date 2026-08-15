@@ -42,7 +42,10 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-# SQLite local database (use Turso in production)
+# SQLite local databases (use Turso in production)
+*.db
+*.db-shm
+*.db-wal
 prisma/*.db
 prisma/*.db-shm
 prisma/*.db-wal
