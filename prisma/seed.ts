@@ -1,9 +1,6 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import { config } from "dotenv";
-config({ path: ".env.local" });
-
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import bcrypt from "bcryptjs";
