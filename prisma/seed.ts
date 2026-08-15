@@ -1,12 +1,14 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 import { PrismaClient } from "../lib/generated/prisma/client";
 import bcrypt from "bcryptjs";
 import path from "path";
 
-// libsql requires absolute path: file:./x → file:/abs/path/x
 function toLibsqlUrl(raw: string): string {
   if (raw.startsWith("file:./") || raw.startsWith("file:.\\")) {
     return `file:${path.resolve(process.cwd(), raw.slice(7).replace(/\\/g, "/"))}`;
@@ -19,10 +21,10 @@ function toLibsqlUrl(raw: string): string {
 
 const rawUrl = process.env["DATABASE_URL"] ?? "file:dev.db";
 const dbUrl = toLibsqlUrl(rawUrl);
+const authToken = process.env["TURSO_AUTH_TOKEN"];
 console.log("DB URL:", dbUrl);
 
-// PrismaLibSql accepts config object with url (Prisma 7 adapter API)
-const adapter = new PrismaLibSql({ url: dbUrl });
+const adapter = new PrismaLibSql({ url: dbUrl, ...(authToken ? { authToken } : {}) });
 const prisma = new PrismaClient({ adapter } as never);
 
 async function main() {
