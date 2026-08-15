@@ -557,13 +557,69 @@ Bottom Nav mobile : 5 onglets (Accueil / Produits / Occasion / Commandes / Profi
 | Mock Unsplash IDs invalides | `app/dashboard/supplier/products/new/page.tsx` | Remplacé par vrai `/api/upload` |
 | Images localhost bloquées | `next.config.ts` | Ajouté `{ protocol: "http", hostname: "localhost" }` |
 | `/api/users/me` GET manquant | `app/api/users/me/route.ts` | Handler GET ajouté |
+| `PrismaLibSql` mauvais usage | `lib/prisma.ts` + `prisma/seed.ts` | Utiliser config object `{ url, authToken }`, pas une instance client |
+
+---
+
+## Déploiement (2026-08-15)
+
+### Infrastructure
+- **GitHub** : `https://github.com/businessbouro-cell/sokoflux` (branche `main`)
+- **Base de données** : Turso (SQLite cloud, région `aws-eu-west-1`)
+  - URL : `libsql://sokuflux-businessbouro-cell.aws-eu-west-1.turso.io`
+  - Seeded : 2 fournisseurs, 20 produits, 10 annonces, 3 conteneurs, 5 commandes
+- **Hébergement** : Vercel (connecté au repo GitHub)
+
+### Variables d'environnement Vercel (production)
+
+```env
+DATABASE_URL=libsql://sokuflux-businessbouro-cell.aws-eu-west-1.turso.io
+TURSO_AUTH_TOKEN=<token Turso généré>
+NEXTAUTH_URL=https://<url-vercel>.vercel.app  # mettre après 1er deploy
+NEXTAUTH_SECRET=sokoflux-prod-secret-2026-guinee
+```
+
+### Adapter Prisma — règle critique
+
+`PrismaLibSql` de `@prisma/adapter-libsql` est une **factory**, pas un wrapper de client :
+
+```typescript
+// ✅ CORRECT — passer un config object
+const adapter = new PrismaLibSql({ url, authToken });
+
+// ❌ FAUX — ne pas passer un client @libsql/client
+const client = createClient({ url, authToken });
+const adapter = new PrismaLibSql(client);  // URL_INVALID à l'exécution
+```
+
+### Build & deploy
+
+```bash
+# Build (via Vercel CI) :
+prisma generate && next build
+
+# Seed Turso (une seule fois, en local) :
+# 1. Mettre DATABASE_URL + TURSO_AUTH_TOKEN dans .env.local
+# 2. npx tsx prisma/seed.ts
+```
+
+### Schema Prisma
+
+Le datasource n'a **pas** de champ `url` (géré par l'adapter au runtime, pas par le schéma) :
+
+```prisma
+datasource db {
+  provider = "sqlite"
+  # PAS de url ici — l'adapter lit DATABASE_URL depuis process.env
+}
+```
 
 ---
 
 ## Prochaines étapes (optionnelles)
 
-1. **Push notifications** — service worker + subscription dans `lib/notifications/push.ts`
-2. **Webhooks paiements** — `/api/webhooks/orange-money` et `/api/webhooks/mtn-momo` (actuellement mocks)
-3. **Image upload Cloudinary** — remplacer `public/uploads/` local par Cloudinary en production
-4. **Tests E2E** — Playwright sur les flows critiques (auth, commande, paiement)
-5. **Déploiement** — Vercel + Turso (SQLite distribué) ou Railway (Postgres)
+1. **NEXTAUTH_URL** — après 1er deploy Vercel, ajouter l'URL réelle dans les env vars Vercel
+2. **Push notifications** — service worker + subscription dans `lib/notifications/push.ts`
+3. **Webhooks paiements** — `/api/webhooks/orange-money` et `/api/webhooks/mtn-momo` (actuellement mocks)
+4. **Image upload cloud** — remplacer `public/uploads/` local par Cloudinary ou Vercel Blob en production
+5. **Domaine custom** — connecter un domaine `.com` ou `.africa` dans les settings Vercel
