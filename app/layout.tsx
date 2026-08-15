@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "SokoFlux — Marketplace Afrique de l'Ouest",
   description: "La marketplace e-commerce qui connecte la Chine et l'Afrique de l'Ouest. Importez, vendez et achetez en Guinée.",
