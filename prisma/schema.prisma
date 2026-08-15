@@ -1,0 +1,319 @@
+// SQLite en dev — changer provider="postgresql" + DATABASE_URL pour la production (Supabase)
+// Les champs String[] sont stockés en JSON string sur SQLite
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String  @id @default(cuid())
+  phone        String  @unique
+  email        String? @unique
+  name         String
+  passwordHash String
+  avatar       String?
+  city         String  @default("Conakry")
+  region       String  @default("Conakry")
+  country      String  @default("GN")
+  isVerified   Boolean @default(false)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roles            UserRole[]
+  importerProfile  ImporterProfile?
+  merchantProfile  MerchantProfile?
+  supplierProfile  SupplierProfile?
+  buyerOrders      Order[]          @relation("BuyerOrders")
+  sellerOrders     Order[]          @relation("SellerOrders")
+  listings         Listing[]
+  reviews          Review[]         @relation("ReviewAuthor")
+  reviewsReceived  Review[]         @relation("ReviewTarget")
+  sentMessages     Message[]        @relation("MessageSender")
+  receivedMessages Message[]        @relation("MessageReceiver")
+  notifications    Notification[]
+  wallet           Wallet?
+}
+
+model UserRole {
+  id     String @id @default(cuid())
+  userId String
+  role   String // IMPORTER | LOCAL_MERCHANT | INDIVIDUAL | SUPPLIER | ADMIN
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+}
+
+model SupplierProfile {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  companyName     String
+  companyNameCn   String?
+  city            String
+  province        String    @default("")
+  description     String    @default("")
+  logo            String?
+  banner          String?
+  businessLicense String?
+  isVerified      Boolean   @default(false)
+  verifiedAt      DateTime?
+  rating          Float     @default(0)
+  totalSales      Int       @default(0)
+  responseTime    Int?
+  minOrderValue   Float     @default(0)
+  shippingPorts   String    @default("[]")
+  categories      String    @default("[]")
+  certifications  String    @default("[]")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products Product[]
+}
+
+model ImporterProfile {
+  id            String  @id @default(cuid())
+  userId        String  @unique
+  businessName  String?
+  taxId         String?
+  importLicense String?
+  isVerified    Boolean @default(false)
+  totalImports  Int     @default(0)
+
+  createdAt DateTime @default(now())
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  shipments Shipment[]
+}
+
+model MerchantProfile {
+  id          String  @id @default(cuid())
+  userId      String  @unique
+  shopName    String
+  shopBanner  String?
+  description String?
+  city        String
+  region      String
+  address     String?
+  isVerified  Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  products Product[]
+}
+
+model Product {
+  id             String  @id @default(cuid())
+  title          String
+  description    String
+  images         String  @default("[]")
+  category       String
+  subcategory    String?
+  priceUSD       Float?
+  priceGNF       Float?
+  minOrderQty    Int     @default(1)
+  stockQty       Int     @default(0)
+  unit           String  @default("unit")
+  weight         Float?
+  dimensions     String?
+  shippingPort   String?
+  shippingType   String?
+  leadTimeDays   Int?
+  certifications String  @default("[]")
+  tags           String  @default("[]")
+  isActive       Boolean @default(true)
+  isVerified     Boolean @default(false)
+  viewCount      Int     @default(0)
+  orderCount     Int     @default(0)
+  rating         Float   @default(0)
+  supplierId     String?
+  merchantId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  supplier   SupplierProfile? @relation(fields: [supplierId], references: [id])
+  merchant   MerchantProfile? @relation(fields: [merchantId], references: [id])
+  reviews    Review[]
+  orderItems OrderItem[]
+}
+
+model Listing {
+  id          String  @id @default(cuid())
+  title       String
+  description String
+  images      String  @default("[]")
+  price       Float
+  category    String
+  condition   String
+  city        String
+  region      String
+  isActive    Boolean @default(true)
+  isSold      Boolean @default(false)
+  viewCount   Int     @default(0)
+  sellerId    String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seller User @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+}
+
+model Shipment {
+  id               String    @id @default(cuid())
+  reference        String    @unique
+  type             String
+  status           String
+  origin           String
+  destination      String    @default("Conakry")
+  departureDate    DateTime?
+  estimatedArrival DateTime?
+  actualArrival    DateTime?
+  capacityM3       Float
+  usedM3           Float     @default(0)
+  pricePerM3       Float?
+  fullPrice        Float?
+  customsFee       Float?
+  importerId       String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  importer       ImporterProfile @relation(fields: [importerId], references: [id])
+  trackingEvents TrackingEvent[]
+  orders         Order[]
+}
+
+model TrackingEvent {
+  id          String   @id @default(cuid())
+  shipmentId  String
+  location    String
+  description String
+  status      String
+  timestamp   DateTime @default(now())
+
+  shipment Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+}
+
+model Order {
+  id             String  @id @default(cuid())
+  reference      String  @unique
+  status         String
+  type           String
+  buyerId        String
+  sellerId       String
+  subtotalUSD    Float?
+  subtotalGNF    Float?
+  shippingFeeGNF Float?
+  platformFeeGNF Float?
+  totalGNF       Float
+  paymentMethod  String
+  paymentStatus  String  @default("PENDING")
+  escrowReleased Boolean @default(false)
+  deliveryAddress String?
+  deliveryCity   String?
+  deliveryRegion String?
+  notes          String?
+  shipmentId     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  buyer       User         @relation("BuyerOrders", fields: [buyerId], references: [id])
+  seller      User         @relation("SellerOrders", fields: [sellerId], references: [id])
+  items       OrderItem[]
+  shipment    Shipment?    @relation(fields: [shipmentId], references: [id])
+  transaction Transaction?
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String?
+  listingId String?
+  title     String
+  image     String?
+  priceGNF  Float
+  quantity  Int
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+}
+
+model Wallet {
+  id         String @id @default(cuid())
+  userId     String @unique
+  balanceGNF Float  @default(0)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id          String  @id @default(cuid())
+  walletId    String
+  orderId     String? @unique
+  type        String
+  amount      Float
+  currency    String  @default("GNF")
+  status      String  @default("PENDING")
+  reference   String?
+  description String
+
+  createdAt DateTime @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id])
+  order  Order? @relation(fields: [orderId], references: [id])
+}
+
+model Message {
+  id          String  @id @default(cuid())
+  senderId    String
+  receiverId  String
+  content     String
+  isRead      Boolean @default(false)
+  attachments String  @default("[]")
+
+  createdAt DateTime @default(now())
+
+  sender   User @relation("MessageSender", fields: [senderId], references: [id])
+  receiver User @relation("MessageReceiver", fields: [receiverId], references: [id])
+}
+
+model Review {
+  id        String  @id @default(cuid())
+  rating    Int
+  comment   String?
+  authorId  String
+  targetId  String
+  productId String?
+  orderId   String?
+
+  createdAt DateTime @default(now())
+
+  author  User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  target  User     @relation("ReviewTarget", fields: [targetId], references: [id])
+  product Product? @relation(fields: [productId], references: [id])
+}
+
+model Notification {
+  id     String  @id @default(cuid())
+  userId String
+  type   String
+  title  String
+  body   String
+  data   String?
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1D9E75;
+  --color-primary-dark: #0F6E56;
+  --color-primary-darker: #085041;
+  --color-primary-darkest: #04342C;
+  --color-primary-foreground: #ffffff;
+  --color-gold: #EF9F27;
+  --color-gold-dark: #BA7517;
+  --color-gold-foreground: #ffffff;
+  --color-background: #ffffff;
+  --color-surface: #F7F5F0;
+  --color-border: #E8E4DB;
+  --color-muted: #9CA3AF;
+  --color-muted-foreground: #6B7280;
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #ffffff;
+  --color-success: #22C55E;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+
+  --font-sans: Inter, system-ui, -apple-system, sans-serif;
+
+  --radius: 0.5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #111827;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 1024px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+/* Scrollbar minimaliste */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #E8E4DB;
+  border-radius: 2px;
+}
+
+/* Safe area pour mobile (bottom nav) */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 1rem);
+}
+
+/* Transitions douces */
+a, button {
+  transition: color 0.15s, background-color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+/* Focus visible accessible */
+*:focus-visible {
+  outline: 2px solid #1D9E75;
+  outline-offset: 2px;
+}
