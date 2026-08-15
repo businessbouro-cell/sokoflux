@@ -19,7 +19,8 @@ function toLibsqlUrl(raw: string): string {
 function createPrismaClient() {
   const rawUrl = process.env.DATABASE_URL ?? "file:dev.db";
   const url = toLibsqlUrl(rawUrl);
-  const adapter = new PrismaLibSql({ url });
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const adapter = new PrismaLibSql({ url, ...(authToken ? { authToken } : {}) });
   return new PrismaClient({ adapter } as never);
 }
 
