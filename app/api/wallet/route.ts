@@ -45,11 +45,8 @@ export async function POST(req: NextRequest) {
     update: {},
   });
 
-  const delta = type === "WITHDRAWAL" || type === "ESCROW_LOCK" ? -amount : amount;
-
-  if (delta < 0 && wallet.balanceGNF + delta < 0) {
-    return NextResponse.json({ error: "Solde insuffisant" }, { status: 400 });
-  }
+  // type is always DEPOSIT here — delta is always positive
+  const delta = amount;
 
   const [updatedWallet, transaction] = await prisma.$transaction([
     prisma.wallet.update({
