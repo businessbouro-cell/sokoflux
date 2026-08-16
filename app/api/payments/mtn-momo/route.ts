@@ -27,10 +27,16 @@ export async function GET(req: NextRequest) {
   if (!referenceId) return NextResponse.json({ error: "referenceId requis" }, { status: 400 });
 
   const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
   const status = await getMTNPaymentStatus(referenceId);
 
-  if (status.status === "SUCCESSFUL" && orderId && session) {
-    await initiateEscrow(orderId);
+  if (status.status === "SUCCESSFUL" && orderId) {
+    const { prisma } = await import("@/lib/prisma");
+    const order = await prisma.order.findUnique({ where: { id: orderId }, select: { buyerId: true } });
+    if (order?.buyerId === session.user.id) {
+      await initiateEscrow(orderId);
+    }
   }
 
   return NextResponse.json(status);

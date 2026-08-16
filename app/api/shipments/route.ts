@@ -4,8 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
-  const status = searchParams.get("status");
 
   const where: Record<string, unknown> = {};
   if (status) where.status = status;
@@ -39,12 +41,13 @@ export async function POST(req: NextRequest) {
 
   if (!importerProfile) return NextResponse.json({ error: "Profil importateur manquant" }, { status: 400 });
 
-  const ref = `SF-${new Date().getFullYear()}-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
+  const randomPart = require("crypto").randomBytes(3).toString("hex").toUpperCase();
+  const ref = `SF-${new Date().getFullYear()}-${randomPart}`;
 
   const shipment = await prisma.shipment.create({
     data: {
       importerId: importerProfile.id,
-      reference: body.reference ?? ref,
+      reference: ref,
       type: body.type ?? "FCL_20",
       origin: body.origin ?? "Guangzhou",
       destination: body.destination ?? "Conakry",

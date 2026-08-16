@@ -5,8 +5,8 @@ import { initiateEscrow } from "@/lib/payments/escrow";
 import { sendSMSNotification } from "@/lib/notifications/sms";
 
 function verifySignature(payload: string, signature: string): boolean {
-  const secret = process.env.MTN_MOMO_WEBHOOK_SECRET ?? "";
-  if (!secret) return true; // dev: skip
+  const secret = process.env.MTN_MOMO_WEBHOOK_SECRET;
+  if (!secret) return false;
   const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }

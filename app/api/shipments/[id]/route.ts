@@ -4,21 +4,30 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
   const { id } = await params;
+  const roles = (session.user.roles as string[]) ?? [];
+  const isAdmin = roles.includes("ADMIN");
 
   const shipment = await prisma.shipment.findUnique({
     where: { id },
     include: {
-      importer: { include: { user: { select: { name: true, phone: true } } } },
+      importer: { include: { user: { select: { name: true } } } },
       trackingEvents: { orderBy: { timestamp: "desc" } },
       orders: {
-        include: { buyer: { select: { name: true, phone: true } } },
+        include: { buyer: { select: { name: true } } },
         take: 10,
       },
     },
   });
 
   if (!shipment) return NextResponse.json({ error: "Conteneur introuvable" }, { status: 404 });
+
+  const isOwner = shipment.importer?.userId === session.user.id;
+  if (!isOwner && !isAdmin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+
   return NextResponse.json(shipment);
 }
 

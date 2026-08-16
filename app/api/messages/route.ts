@@ -69,6 +69,9 @@ export async function POST(req: NextRequest) {
   if (!receiverId || !content?.trim()) {
     return NextResponse.json({ error: "Destinataire et contenu requis" }, { status: 400 });
   }
+  if (typeof content !== "string" || content.trim().length > 2000) {
+    return NextResponse.json({ error: "Message trop long (max 2000 caractères)" }, { status: 400 });
+  }
 
   const message = await prisma.message.create({
     data: {

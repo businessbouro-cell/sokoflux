@@ -5,8 +5,8 @@ import { initiateEscrow } from "@/lib/payments/escrow";
 import { sendSMSNotification } from "@/lib/notifications/sms";
 
 function verifySignature(payload: string, signature: string): boolean {
-  const secret = process.env.ORANGE_MONEY_WEBHOOK_SECRET ?? "";
-  if (!secret) return true; // dev: skip verification
+  const secret = process.env.ORANGE_MONEY_WEBHOOK_SECRET;
+  if (!secret) return false;
   const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
   return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
 }

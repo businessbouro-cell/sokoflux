@@ -9,7 +9,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const listing = await prisma.listing.findUnique({
     where: { id },
     include: {
-      seller: { select: { id: true, name: true, phone: true, createdAt: true } },
+      seller: { select: { id: true, name: true, createdAt: true } },
     },
   });
 

@@ -49,6 +49,17 @@ export async function PATCH(
   const isAdmin = (session.user as { roles?: string[] }).roles?.includes("ADMIN");
   if (!isOwner && !isAdmin) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
 
+  const allowedBuyerStatuses = ["CANCELLED"];
+  const allowedSellerStatuses = ["CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+  const allowedAdminStatuses = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED", "DISPUTED", "REFUNDED"];
+
+  if (status) {
+    const allowed = isAdmin ? allowedAdminStatuses : order.buyerId === session.user.id ? allowedBuyerStatuses : allowedSellerStatuses;
+    if (!allowed.includes(status)) {
+      return NextResponse.json({ error: "Statut non autorisé" }, { status: 403 });
+    }
+  }
+
   const updated = await prisma.order.update({
     where: { id },
     data: {

@@ -13,6 +13,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await req.json();
 
+  if (typeof body.isVerified !== "boolean") {
+    return NextResponse.json({ error: "isVerified doit être un booléen" }, { status: 400 });
+  }
+
   const user = await prisma.user.update({
     where: { id },
     data: { isVerified: body.isVerified },

@@ -29,8 +29,15 @@ export async function POST(req: NextRequest) {
     await mkdir(uploadsDir, { recursive: true });
   }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const mimeToExt: Record<string, string> = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+  };
+  const ext = mimeToExt[file.type] ?? "jpg";
+  const { randomBytes } = await import("crypto");
+  const filename = `${Date.now()}-${randomBytes(8).toString("hex")}.${ext}`;
   const filepath = join(uploadsDir, filename);
 
   const bytes = await file.arrayBuffer();

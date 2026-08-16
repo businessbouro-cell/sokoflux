@@ -52,3 +52,6 @@ prisma/*.db-wal
 
 # Local file uploads
 /public/uploads/
+
+.vercel
+.env*

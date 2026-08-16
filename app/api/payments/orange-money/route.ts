@@ -25,6 +25,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+
   const { searchParams } = new URL(req.url);
   const txnId = searchParams.get("txnId");
   if (!txnId) return NextResponse.json({ error: "txnId requis" }, { status: 400 });

@@ -8,7 +8,7 @@ import { sendWelcomeEmail } from "@/lib/notifications/email";
 const RegisterSchema = z.object({
   phone: z.string().min(8).max(15),
   name: z.string().min(2).max(100),
-  password: z.string().min(6),
+  password: z.string().min(8).max(128),
   role: z.enum(["IMPORTER", "LOCAL_MERCHANT", "INDIVIDUAL", "SUPPLIER"]),
   email: z.string().email().optional(),
   // Supplier fields

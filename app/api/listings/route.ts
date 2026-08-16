@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
   const [listings, total] = await Promise.all([
     prisma.listing.findMany({
       where,
-      include: { seller: { select: { id: true, name: true, phone: true } } },
+      include: { seller: { select: { id: true, name: true } } },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,

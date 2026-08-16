@@ -31,9 +31,11 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
-  const { amount, type = "DEPOSIT", description } = await req.json();
+  const body = await req.json();
+  const { amount, description } = body;
+  const type = "DEPOSIT"; // only DEPOSIT allowed from user-facing API
 
-  if (!amount || typeof amount !== "number" || amount <= 0) {
+  if (!amount || typeof amount !== "number" || amount <= 0 || amount > 100_000_000) {
     return NextResponse.json({ error: "Montant invalide" }, { status: 400 });
   }
 
