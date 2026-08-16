@@ -19,9 +19,11 @@ const AUTH_ROUTES = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const isSecure = request.url.startsWith("https://");
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: isSecure,
   });
 
   // Rediriger les utilisateurs connectés hors des pages auth
