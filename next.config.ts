@@ -13,7 +13,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react", "recharts"],
   },
-  turbopack: {},
 };
 
 export default withPWA({
