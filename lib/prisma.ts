@@ -7,6 +7,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function toLibsqlUrl(raw: string): string {
+  raw = raw.replace(/^["']|["']$/g, "").trim();
   if (raw.startsWith("file:./") || raw.startsWith("file:.\\")) {
     return `file:${path.resolve(process.cwd(), raw.slice(7).replace(/\\/g, "/"))}`;
   }
