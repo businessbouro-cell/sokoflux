@@ -133,9 +133,9 @@ function LoginForm() {
         <p className="text-xs text-gray-400 text-center mb-2">Accès de démonstration</p>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: "👤 Acheteur", phone: "+224600000001", pwd: "password123" },
-            { label: "🏭 Fournisseur", phone: "+224600000002", pwd: "password123" },
-            { label: "🚢 Importateur", phone: "+224600000003", pwd: "password123" },
+            { label: "👤 Acheteur", phone: "+224622000001", pwd: "password123" },
+            { label: "🏭 Fournisseur", phone: "+8613800000001", pwd: "password123" },
+            { label: "🚢 Importateur", phone: "+224620000001", pwd: "password123" },
             { label: "🔑 Admin", phone: "+224600000000", pwd: "admin123" },
           ].map((demo) => (
             <button

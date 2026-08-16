@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { PaymentModal } from "@/components/payments/PaymentModal";
 import { formatUSD, formatGNF, usdToGnf } from "@/lib/utils/currency";
 import { parseJsonField } from "@/lib/utils/formatters";
-import { MapPin, Package, Clock, Ship, MessageCircle, ChevronLeft, ChevronRight, Star, ShoppingCart, MessageSquare } from "lucide-react";
+import { useCartStore } from "@/stores/useCartStore";
+import { MapPin, Package, Clock, Ship, MessageCircle, ChevronLeft, ChevronRight, Star, ShoppingCart, MessageSquare, Check } from "lucide-react";
 
 interface ProductDetail {
   id: string;
@@ -37,7 +38,7 @@ interface ProductDetail {
     city: string;
     isVerified: boolean;
     rating: number;
-    user: { id: string; name: string; phone: string };
+    user: { id: string; name: string };
   } | null;
 }
 
@@ -52,6 +53,8 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [orderId, setOrderId] = useState<string | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [ordering, setOrdering] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+  const addItem = useCartStore((s) => s.addItem);
   const [reviews, setReviews] = useState<{ id: string; rating: number; comment: string | null; author: { name: string }; createdAt: string }[]>([]);
 
   useEffect(() => {
@@ -215,10 +218,35 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
               </div>
 
               <div className="flex flex-col gap-2">
-                <Button className="w-full" size="lg" onClick={handleOrder} disabled={ordering || !product.supplier}>
-                  {ordering ? "Création commande..." : <><ShoppingCart size={16} className="mr-2" />Commander — {formatGNF(totalGNF)}</>}
+                {/* Ajouter au panier */}
+                <Button
+                  variant="outline"
+                  className="w-full border-[#1D9E75] text-[#1D9E75] hover:bg-[#1D9E75]/5"
+                  size="lg"
+                  onClick={() => {
+                    if (!product.supplier) return;
+                    addItem({
+                      id: product.id,
+                      productId: product.id,
+                      title: product.title,
+                      image: images[0],
+                      priceGNF: Math.round(usdToGnf(priceUSD)),
+                      quantity,
+                      sellerId: product.supplier.user.id,
+                      sellerName: product.supplier.companyName,
+                    });
+                    setAddedToCart(true);
+                    setTimeout(() => setAddedToCart(false), 2000);
+                  }}
+                  disabled={!product.supplier}
+                >
+                  {addedToCart ? <><Check size={16} className="mr-2" />Ajouté !</> : <><ShoppingCart size={16} className="mr-2" />Ajouter au panier</>}
                 </Button>
-                <Button variant="outline" className="w-full" asChild>
+                {/* Commander directement */}
+                <Button className="w-full bg-[#1D9E75] hover:bg-[#0F6E56]" size="lg" onClick={handleOrder} disabled={ordering || !product.supplier}>
+                  {ordering ? "Création commande..." : <>Commander — {formatGNF(totalGNF)}</>}
+                </Button>
+                <Button variant="ghost" className="w-full text-gray-500" asChild>
                   <Link href={session && product.supplier ? `/messages?with=${product.supplier.user.id}&product=${product.id}` : "/login"}>
                     <MessageCircle size={16} className="mr-2" /> Contacter le fournisseur
                   </Link>
