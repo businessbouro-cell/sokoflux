@@ -24,17 +24,20 @@ const adapter = new PrismaLibSql({ url: dbUrl, ...(authToken ? { authToken } : {
 const prisma = new PrismaClient({ adapter } as never);
 
 async function main() {
-  const passwordHash = await bcrypt.hash("admin123", 10);
+  const adminPhone = process.env["ADMIN_PHONE"] ?? "+224600000000";
+  const adminPassword = process.env["ADMIN_PASSWORD"] ?? "admin123";
 
-  const existing = await prisma.user.findUnique({ where: { phone: "+224600000000" } });
+  const passwordHash = await bcrypt.hash(adminPassword, 10);
+
+  const existing = await prisma.user.findUnique({ where: { phone: adminPhone } });
   if (existing) {
-    console.log("✅ Admin already exists:", existing.phone);
+    console.log("✅ Admin existe déjà:", existing.phone);
     return;
   }
 
   const admin = await prisma.user.create({
     data: {
-      phone: "+224600000000",
+      phone: adminPhone,
       name: "Admin SokoFlux",
       passwordHash,
       isVerified: true,
@@ -43,7 +46,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Admin créé:", admin.phone, "/ admin123");
+  console.log("✅ Admin créé:", admin.phone);
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

@@ -3,13 +3,24 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange"> {
+interface PhoneInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
   value?: string;
   onChange?: (value: string) => void;
   error?: string;
 }
 
 export function PhoneInput({ value, onChange, error, className, ...props }: PhoneInputProps) {
+  // Affiche les chiffres bruts (sans +224) dans le champ
+  const toDisplay = (v?: string) =>
+    v ? v.replace(/^\+224/, "") : "";
+
+  const [display, setDisplay] = React.useState(() => toDisplay(value));
+
+  // Sync si le parent reset la valeur (ex: retour étape 1)
+  React.useEffect(() => {
+    setDisplay(toDisplay(value));
+  }, [value]);
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex">
@@ -20,9 +31,10 @@ export function PhoneInput({ value, onChange, error, className, ...props }: Phon
           type="tel"
           inputMode="numeric"
           placeholder="620 000 000"
-          value={value ?? ""}
+          value={display}
           onChange={(e) => {
             const raw = e.target.value.replace(/\D/g, "");
+            setDisplay(raw);
             onChange?.(raw ? `+224${raw}` : "");
           }}
           className={cn(

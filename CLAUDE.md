@@ -277,6 +277,42 @@ interface SessionUser {
 - `/admin/*` → ADMIN
 - `/orders`, `/messages`, `/profile`, `/settings` → authentifié
 
+### Inscription (2026-08-16)
+
+**Flux 2 étapes** — page `/register` (`app/(auth)/register/page.tsx`) :
+1. **Étape 1** : Nom + téléphone + mot de passe + rôle sélectionné
+2. **Étape 2** : Confirmation — plus d'OTP (supprimé, trop bloquant sans SMS réel)
+
+Après création du compte : **auto-login** via `signIn("credentials", { redirect: false })` → redirect vers le dashboard du rôle sans passer par `/login`.
+
+```typescript
+const ROLE_REDIRECTS = {
+  INDIVIDUAL: "/",
+  LOCAL_MERCHANT: "/dashboard/merchant",
+  IMPORTER: "/dashboard/importer",
+  SUPPLIER: "/dashboard/supplier",
+};
+```
+
+### Login (2026-08-16)
+
+**Redirect intelligent** par rôle après connexion :
+```typescript
+function getRedirectForRoles(roles: string[]): string {
+  if (roles.includes("ADMIN")) return "/admin";
+  if (roles.includes("SUPPLIER")) return "/dashboard/supplier";
+  if (roles.includes("IMPORTER")) return "/dashboard/importer";
+  if (roles.includes("LOCAL_MERCHANT")) return "/dashboard/merchant";
+  return "/";
+}
+```
+
+**Boutons démo rapide** (bas du formulaire de login) — utiliser les phones exacts du seed :
+- Acheteur : `+224622000001` / `password123`
+- Fournisseur : `+8613800000001` / `password123` (numéro chinois !)
+- Importateur : `+224620000001` / `password123`
+- Admin : `+224600000000` / `admin123` (pas dans seed, créer via `create-admin.ts`)
+
 ---
 
 ## Paiements & Escrow
@@ -396,8 +432,9 @@ Props : `placeholder`, `onSearch`, `debounceMs`, `className`
 | Route | Type | Description |
 |-------|------|-------------|
 | `/` | Static | Page d'accueil (données live Prisma) |
-| `/login` | Static | Connexion téléphone + mot de passe |
-| `/register` | Static | Inscription multi-étapes par rôle |
+| `/login` | Static+Suspense | Connexion téléphone + mot de passe + boutons démo rapide |
+| `/register` | Static | Inscription 2 étapes (infos + rôle), auto-login après création |
+| `/cart` | Static | Panier : liste articles, quantités, checkout groupé par vendeur |
 | `/listings` | Static+Suspense | Grille annonces occasion + infinite scroll |
 | `/listings/[id]` | Dynamic | Détail annonce + contact vendeur |
 | `/listings/new` | Static | Publier annonce (upload images réel) |
@@ -491,7 +528,27 @@ Props : `placeholder`, `onSearch`, `debounceMs`, `className`
 - 5 particuliers
 - 2 conteneurs (1 IN_TRANSIT, 1 DELIVERED)
 - 10 annonces occasion
-- Utilisateur admin : phone `+224600000000` / password `admin123`
+
+### Comptes de test (password : `password123` sauf admin)
+
+| Rôle | Téléphone | Mot de passe | Notes |
+|------|-----------|--------------|-------|
+| Fournisseur | `+8613800000001` | `password123` | Guangzhou Tech Co. |
+| Fournisseur | `+8613800000002` | `password123` | Yiwu Fashion House |
+| Importateur | `+224620000001` | `password123` | Mamadou Bah |
+| Importateur | `+224620000002` | `password123` | |
+| Importateur | `+224620000003` | `password123` | aussi LOCAL_MERCHANT |
+| Commerçant | `+224621000001` | `password123` | |
+| Commerçant | `+224621000002` | `password123` | |
+| Acheteur | `+224622000001` | `password123` | Ousmane Balde |
+| Acheteur | `+224622000002..5` | `password123` | |
+| **Admin** | `+224600000000` | `admin123` | Créé via `prisma/create-admin.ts` (pas dans seed.ts) |
+
+> **Important** : L'admin n'est pas dans `seed.ts`. En local, le créer avec :
+> ```bash
+> "C:\Program Files\nodejs\node.exe" node_modules/tsx/dist/cli.mjs prisma/create-admin.ts
+> ```
+> En production Turso, l'admin existe déjà.
 
 ---
 
@@ -559,12 +616,54 @@ Bottom Nav mobile : 5 onglets (Accueil / Produits / Occasion / Commandes / Profi
 | `/api/users/me` GET manquant | `app/api/users/me/route.ts` | Handler GET ajouté |
 | `PrismaLibSql` mauvais usage | `lib/prisma.ts` + `prisma/seed.ts` | Utiliser config object `{ url, authToken }`, pas une instance client |
 
+## Corrections appliquées (2026-08-16)
+
+### Sécurité
+
+| Problème | Fichier | Fix |
+|----------|---------|-----|
+| Numéro de téléphone exposé dans APIs publiques | `app/api/listings/route.ts`, `listings/[id]/route.ts`, `products/[id]/route.ts` | Retiré `phone` du `select` → seulement `id` et `name` |
+| Webhook bypass si secret non configuré | `app/api/webhooks/mtn-momo/route.ts`, `webhooks/orange-money/route.ts` | `if (!secret) return false` au lieu de `return true` |
+| GET Orange Money sans auth | `app/api/payments/orange-money/route.ts` | Ajouté `getServerSession()` + guard 401 |
+| Upload : extension basée sur nom client (spoofable) | `app/api/upload/route.ts` | Extension déduite du MIME type ; nom = `timestamp-randomHex.ext` |
+| GET shipment sans auth/ownership | `app/api/shipments/[id]/route.ts` | Ajouté auth + vérif propriétaire ou ADMIN |
+| Erreur TypeScript wallet route | `app/api/wallet/route.ts` | Type `"DEPOSIT"` toujours vrai → `const delta = amount;` |
+
+### Build (Vercel / Next.js 16 + Turbopack)
+
+| Problème | Fichier | Fix |
+|----------|---------|-----|
+| `next-pwa` injecte webpack config même avec `disable: true`, incompatible Turbopack | `next.config.ts` | `withPWA` bypassed sur Vercel et en dev ; actif seulement en build local non-Vercel |
+
+```typescript
+// next.config.ts — pattern anti-conflit Turbopack + PWA
+const isVercel = process.env.VERCEL === "1";
+const isDev = process.env.NODE_ENV === "development";
+export default (isVercel || isDev)
+  ? nextConfig
+  : withPWA({ dest: "public", register: true, skipWaiting: true, disable: false })(nextConfig);
+```
+
+### Auth / UI
+
+| Changement | Fichier | Description |
+|------------|---------|-------------|
+| Suppression étape OTP | `app/(auth)/register/page.tsx` | OTP bloquant sans SMS réel — retiré, peut être ré-ajouté avec Africa's Talking |
+| Auto-login après inscription | `app/(auth)/register/page.tsx` | `signIn()` immédiat + redirect dashboard selon rôle |
+| Redirect login par rôle | `app/(auth)/login/page.tsx` | `getSession()` après login → redirect vers dashboard approprié |
+| Boutons démo login | `app/(auth)/login/page.tsx` | Phones corrigés (fournisseur = chinois `+8613800000001`) |
+| Navbar role-aware | `components/layout/Navbar.tsx` | Lien dashboard selon rôle, cart → `/cart`, dropdown nom+rôle |
+| Page panier | `app/cart/page.tsx` | Nouveau : liste items, quantités, checkout groupé par vendeur |
+| Bouton panier produit | `app/products/[id]/page.tsx` | `addItem()` Zustand + feedback visuel "Ajouté !" |
+| Script création admin | `prisma/create-admin.ts` | Crée `+224600000000` / `admin123` en local si inexistant |
+
 ---
 
-## Déploiement (2026-08-15)
+## Déploiement (2026-08-16)
 
 ### Infrastructure
 - **GitHub** : `https://github.com/businessbouro-cell/sokoflux` (branche `main`)
+- **URL Vercel** : `https://sokoflux.vercel.app` (auto-deploy depuis `main`)
 - **Base de données** : Turso (SQLite cloud, région `aws-eu-west-1`)
   - URL : `libsql://sokuflux-businessbouro-cell.aws-eu-west-1.turso.io`
   - Seeded : 2 fournisseurs, 20 produits, 10 annonces, 3 conteneurs, 5 commandes
@@ -616,10 +715,18 @@ datasource db {
 
 ---
 
-## Prochaines étapes (optionnelles)
+## Prochaines étapes
 
-1. **NEXTAUTH_URL** — après 1er deploy Vercel, ajouter l'URL réelle dans les env vars Vercel
-2. **Push notifications** — service worker + subscription dans `lib/notifications/push.ts`
-3. **Webhooks paiements** — `/api/webhooks/orange-money` et `/api/webhooks/mtn-momo` (actuellement mocks)
-4. **Image upload cloud** — remplacer `public/uploads/` local par Cloudinary ou Vercel Blob en production
-5. **Domaine custom** — connecter un domaine `.com` ou `.africa` dans les settings Vercel
+### Priorité haute (fonctionnalités manquantes pour production)
+
+1. **Cloudinary upload** — Vercel a un filesystem éphémère : `public/uploads/` disparaît à chaque redeploy. Remplacer `app/api/upload/route.ts` par upload direct Cloudinary (env vars déjà documentées ci-dessus)
+2. **Paiements réels** — Orange Money et MTN MoMo sont des mocks. Intégrer les vraies APIs sandbox puis production
+3. **Bouton WhatsApp par produit/annonce** — lien `wa.me/` avec message pré-rempli, clé différenciateur pour le marché africain
+4. **OTP SMS réel** — Africa's Talking sandbox pour vérification téléphone à l'inscription (actuellement désactivé)
+
+### Priorité normale
+
+5. **Rate limiting auth** — endpoints `/api/users`, `/api/auth` vulnérables aux brute-force → Upstash Redis
+6. **Push notifications** — service worker + subscription dans `lib/notifications/push.ts`
+7. **Webhooks paiements** — `/api/webhooks/orange-money` et `/api/webhooks/mtn-momo`
+8. **Domaine custom** — connecter un domaine `.com` ou `.africa` dans les settings Vercel
