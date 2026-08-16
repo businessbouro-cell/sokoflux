@@ -42,37 +42,45 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA({
-  dest: "public",
-  register: true,
-  skipWaiting: true,
-  disable: process.env.NODE_ENV === "development" || process.env.VERCEL === "1",
-  runtimeCaching: [
-    {
-      urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "unsplash-images",
-        expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
-      },
-    },
-    {
-      urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
-      handler: "CacheFirst",
-      options: {
-        cacheName: "cloudinary-images",
-        expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
-      },
-    },
-    {
-      urlPattern: /\/api\/listings.*/i,
-      handler: "NetworkFirst",
-      options: { cacheName: "api-listings", expiration: { maxAgeSeconds: 60 } },
-    },
-    {
-      urlPattern: /\/api\/products.*/i,
-      handler: "NetworkFirst",
-      options: { cacheName: "api-products", expiration: { maxAgeSeconds: 60 } },
-    },
-  ],
-})(nextConfig);
+// On Vercel / production: skip withPWA entirely — next-pwa v5 injects a webpack
+// config that crashes Turbopack (now the default bundler in Next.js 16).
+// PWA is only wired up for local production builds where webpack is used.
+const isVercel = process.env.VERCEL === "1";
+const isDev = process.env.NODE_ENV === "development";
+
+export default (isVercel || isDev)
+  ? nextConfig
+  : withPWA({
+      dest: "public",
+      register: true,
+      skipWaiting: true,
+      disable: false,
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
+          handler: "CacheFirst",
+          options: {
+            cacheName: "unsplash-images",
+            expiration: { maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 },
+          },
+        },
+        {
+          urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/i,
+          handler: "CacheFirst",
+          options: {
+            cacheName: "cloudinary-images",
+            expiration: { maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 },
+          },
+        },
+        {
+          urlPattern: /\/api\/listings.*/i,
+          handler: "NetworkFirst",
+          options: { cacheName: "api-listings", expiration: { maxAgeSeconds: 60 } },
+        },
+        {
+          urlPattern: /\/api\/products.*/i,
+          handler: "NetworkFirst",
+          options: { cacheName: "api-products", expiration: { maxAgeSeconds: 60 } },
+        },
+      ],
+    })(nextConfig);
